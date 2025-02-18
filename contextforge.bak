@@ -1,4 +1,4 @@
-#!/usr/bin/env -S uv run --script
+#!/usr/bin/env -S uv run
 # /// script
 # dependencies = [
 #   "click",
@@ -39,10 +39,4 @@ global_index = 1
 GITHUB_URL_PATTERN = r"https?://github\.com/([^/]+)/([^/]+)"
 TEMP_DIR_PREFIX = "contextforge_"
 
-def should_ignore(path, gitignore_rules):
-    for rule in gitignore_rules:
-        if fnmatch(os.path.basename(path), rule):
-            return True
-        if os.path.isdir(path) and fnmatch(os.path.basename(path) + "/", rule):
-            return True
-    return False 
+// ... rest of existing code ... 
