@@ -8,32 +8,44 @@
 
 > Modern code processing and filtering tool for AI training, code analysis, and documentation generation.
 
-ContextForge is a powerful command-line tool that helps you process and filter code from local directories and GitHub repositories. Perfect for preparing training data for AI models, conducting code analysis, and generating documentation.
+ContextForge is a powerful command-line tool that helps you process and filter code from local directories and GitHub repositories. It is perfect for preparing training data for AI models, conducting code analysis, and generating documentation.
 
 ## ✨ Features
 
 - 🌐 **GitHub Integration**
   - Process repositories directly from URLs
   - Automatic cloning and cleanup
-  - Respects .gitignore rules
+  - Respects `.gitignore` rules
 
 - 🎯 **Smart Filtering**
-  - File extensions (e.g., .py, .js, .md)
+  - File extensions (e.g., `.py`, `.js`, `.md`)
   - Regular expressions
   - File size constraints
   - Modification time filtering
   - Custom ignore patterns
 
-- 📄 **Flexible Output**
+- 🔍 **Intelligent Binary Detection**
+  - Fast extension-based filtering
+  - Magic number detection for file types
+  - Git-style content heuristics
+  - Handles common binary formats:
+    - Images (PNG, JPG, GIF, etc.)
+    - Documents (PDF, DOC, XLS)
+    - Archives (ZIP, TAR, GZ)
+    - Executables and Libraries
+
+- 📄 **Flexible Output Formats**
   - Plain text with customizable separators
   - Claude-optimized XML format
+  - JSON array format (`-j/--json`)
+  - JSONL format (`-l/--jsonl`) for streaming
   - Line numbers support
   - File or stdout output
 
 - 🛠️ **Developer Friendly**
-  - Clean, intuitive CLI
-  - Rich console output
+  - Clean, intuitive CLI with rich console output
   - Comprehensive error handling
+  - Memory-efficient processing
   - Extensive documentation
 
 ## 🚀 Installation
@@ -57,6 +69,9 @@ contextforge https://github.com/flight505/example-repo
 
 # Filter by file extensions
 contextforge . -e py -e md
+
+# Output as JSONL (recommended for large datasets)
+contextforge . -l -o output.jsonl
 ```
 
 ## 📚 Usage Examples
@@ -82,6 +97,12 @@ contextforge https://github.com/flight505/example-repo \
 # Generate Claude-optimized XML with line numbers
 contextforge . --cxml -n -o output.xml
 
+# Generate JSON array output
+contextforge . -j -o output.json
+
+# Generate JSONL (one JSON object per line)
+contextforge . -l -o output.jsonl
+
 # Process multiple paths with custom ignore patterns
 contextforge src tests \
     --ignore "*.pyc" \
@@ -94,8 +115,11 @@ contextforge src tests \
 ### AI Model Training
 
 ```bash
-# Prepare training data from multiple file types
-contextforge . -e py -e js -e ts --cxml -o training.xml
+# Prepare training data in JSONL format
+contextforge . -e py -l -o training.jsonl
+
+# Extract documentation with XML format
+contextforge . -e py -e md --cxml -o docs.xml
 ```
 
 ### Code Review
@@ -139,13 +163,14 @@ contextforge https://github.com/flight505/example-repo \
 | `--ignore-files-only` | Apply ignore patterns to files only |
 | `--ignore-gitignore` | Ignore .gitignore rules |
 | `-c, --cxml` | Output in Claude XML format |
+| `-j, --json` | Output in JSON array format |
+| `-l, --jsonl` | Output in JSONL format (one JSON per line) |
 | `-n, --line-numbers` | Add line numbers |
 | `-o, --output` | Write to file instead of stdout |
 
 ## 🤝 Contributing
 
 Contributions are welcome! Here's how you can help:
-
 1. Fork the repository
 2. Create a feature branch
 3. Add your changes
@@ -159,24 +184,21 @@ Contributions are welcome! Here's how you can help:
 git clone https://github.com/flight505/contextforge.git
 cd contextforge
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+# Run directly with inline dependencies (recommended)
+uv run contextforge.py
 
-# Install development dependencies
+# Or install development dependencies
 uv pip install -e ".[test]"
 
 # Run tests
 pytest
-
-# Run linting
-ruff check .
 ```
 
 ## 📝 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License. See the LICENSE file for details.
 
 <div align="center">
   <sub>Built with ❤️ for the modern developer ecosystem</sub>
 </div>
+```
