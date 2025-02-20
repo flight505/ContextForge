@@ -1,0 +1,1755 @@
+/Users/jesper/Projects/Dev_projects/Tools/ContextForge/README.md
+---
+# ContextForge 🔍
+
+[![PyPI](https://img.shields.io/pypi/v/contextforge.svg)](https://pypi.org/project/contextforge/)
+[![Tests](https://github.com/yourusername/contextforge/actions/workflows/test.yml/badge.svg)](https://github.com/yourusername/contextforge/actions/workflows/test.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/yourusername/contextforge/blob/master/LICENSE)
+[![Python Versions](https://img.shields.io/pypi/pyversions/contextforge.svg)](https://pypi.org/project/contextforge/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+
+> Modern code processing and filtering tool for AI training, code analysis, and documentation generation.
+
+ContextForge is a powerful command-line tool that helps you process and filter code from local directories and GitHub repositories. It is perfect for preparing training data for AI models, conducting code analysis, and generating documentation.
+
+## ✨ Features
+
+- 🌐 **GitHub Integration**
+  - Process repositories directly from URLs
+  - Automatic cloning and cleanup
+  - Respects `.gitignore` rules
+
+- 🎯 **Smart Filtering**
+  - File extensions (e.g., `.py`, `.js`, `.md`)
+  - Regular expressions
+  - File size constraints
+  - Modification time filtering
+  - Custom ignore patterns
+
+- 🔍 **Intelligent Binary Detection**
+  - Fast extension-based filtering
+  - Magic number detection for file types
+  - Git-style content heuristics
+  - Handles common binary formats:
+    - Images (PNG, JPG, GIF, etc.)
+    - Documents (PDF, DOC, XLS)
+    - Archives (ZIP, TAR, GZ)
+    - Executables and Libraries
+
+- 📄 **Flexible Output Formats**
+  - Plain text with customizable separators
+  - Claude-optimized XML format
+  - JSON array format (`-j/--json`)
+  - JSONL format (`-l/--jsonl`) for streaming
+  - Line numbers support
+  - File or stdout output
+
+- 🛠️ **Developer Friendly**
+  - Clean, intuitive CLI with rich console output
+  - Comprehensive error handling
+  - Memory-efficient processing
+  - Extensive documentation
+
+## 🚀 Installation
+
+```bash
+# Using pip
+pip install contextforge
+
+# Using uv (recommended)
+uv pip install contextforge
+```
+
+## 💡 Quick Start
+
+```bash
+# Process a local directory
+contextforge .
+
+# Process a GitHub repository
+contextforge https://github.com/flight505/example-repo
+
+# Filter by file extensions
+contextforge . -e py -e md
+
+# Output as JSONL (recommended for large datasets)
+contextforge . -l -o output.jsonl
+```
+
+## 📚 Usage Examples
+
+### Advanced Filtering
+
+```bash
+# Find Python test files modified in the last week
+contextforge . -e py --regex "test_.*\.py$" \
+    --modified-after 2024-03-10
+
+# Get all JavaScript files between 1KB and 1MB
+contextforge . -e js --min-size 1024 --max-size 1048576
+
+# Process specific files in a GitHub repo
+contextforge https://github.com/flight505/example-repo \
+    -e py --regex "src/.*controller\.py$"
+```
+
+### Output Options
+
+```bash
+# Generate Claude-optimized XML with line numbers
+contextforge . --cxml -n -o output.xml
+
+# Generate JSON array output
+contextforge . -j -o output.json
+
+# Generate JSONL (one JSON object per line)
+contextforge . -l -o output.jsonl
+
+# Process multiple paths with custom ignore patterns
+contextforge src tests \
+    --ignore "*.pyc" \
+    --ignore "*/__pycache__/*" \
+    --ignore-files-only
+```
+
+## 🎯 Common Use Cases
+
+### AI Model Training
+
+```bash
+# Prepare training data in JSONL format
+contextforge . -e py -l -o training.jsonl
+
+# Extract documentation with XML format
+contextforge . -e py -e md --cxml -o docs.xml
+```
+
+### Code Review
+
+```bash
+# Review recent changes in Python and JavaScript files
+contextforge . --modified-after 2024-03-01 \
+    --regex ".*\.(py|js)$" -n
+```
+
+### Documentation Generation
+
+```bash
+# Extract all markdown files, excluding node_modules
+contextforge . --regex ".*\.md$" \
+    --ignore "node_modules/*" -o docs.txt
+```
+
+### Repository Analysis
+
+```bash
+# Analyze specific files in a GitHub repository
+contextforge https://github.com/flight505/example-repo \
+    --regex ".*\.(py|js)$" \
+    --min-size 1000 \
+    --ignore "tests/*" \
+    -n -o analysis.txt
+```
+
+## 🔧 Options
+
+| Option | Description |
+|--------|-------------|
+| `-e, --extension` | Filter by file extensions |
+| `--regex` | Filter using regex pattern |
+| `--min-size` | Filter by minimum file size |
+| `--max-size` | Filter by maximum file size |
+| `--modified-after` | Filter by modification date |
+| `--include-hidden` | Include hidden files |
+| `--ignore` | Patterns to ignore |
+| `--ignore-files-only` | Apply ignore patterns to files only |
+| `--ignore-gitignore` | Ignore .gitignore rules |
+| `-c, --cxml` | Output in Claude XML format |
+| `-j, --json` | Output in JSON array format |
+| `-l, --jsonl` | Output in JSONL format (one JSON per line) |
+| `-n, --line-numbers` | Add line numbers |
+| `-o, --output` | Write to file instead of stdout |
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how you can help:
+1. Fork the repository
+2. Create a feature branch
+3. Add your changes
+4. Run tests: `pytest`
+5. Submit a pull request
+
+## 🔬 Development
+
+```bash
+# Clone the repository
+git clone https://github.com/flight505/contextforge.git
+cd contextforge
+
+# Run directly with inline dependencies (recommended)
+uv run contextforge.py
+
+# Or install development dependencies
+uv pip install -e ".[test]"
+
+# Run tests
+pytest
+```
+
+## 📝 License
+
+This project is licensed under the Apache 2.0 License. See the LICENSE file for details.
+
+<div align="center">
+  <sub>Built with ❤️ for the modern developer ecosystem</sub>
+</div>
+```
+
+---
+
+/Users/jesper/Projects/Dev_projects/Tools/ContextForge/contextforge.py
+---
+#!/usr/bin/env -S uv run
+# /// script
+# dependencies = [
+#   "click",
+#   "rich",
+#   "pygithub",
+#   "gitpython",
+#   "pathspec"
+# ]
+# ///
+
+import json
+import os
+import re
+import shutil
+import tempfile
+from datetime import datetime
+from fnmatch import fnmatch
+from typing import Callable, List, Optional
+
+import click
+from git import Repo
+from rich.console import Console
+from rich.theme import Theme
+
+# Create a custom theme for consistent styling
+custom_theme = Theme({
+    "info": "cyan",
+    "warning": "yellow",
+    "error": "red bold",
+    "success": "green bold",
+    "path": "blue",
+})
+console = Console(theme=custom_theme)
+err_console = Console(theme=custom_theme, file=click.get_text_stream('stderr'))
+
+# Global document index used in XML output.
+document_index = 1
+
+# Constants
+GITHUB_URL_PATTERN = r"https?://github\.com/([^/]+)/([^/]+)"
+TEMP_DIR_PREFIX = "contextforge_"
+
+# Common binary file extensions and magic numbers
+BINARY_EXTENSIONS = {
+    # Executables and Libraries
+    '.exe', '.dll', '.so', '.dylib', '.bin', '.pyc', '.pyo',
+    # Images
+    '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.webp',
+    # Documents
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx',
+    # Archives
+    '.zip', '.tar', '.gz', '.7z', '.rar',
+    # Other
+    '.class', '.jar', '.war', '.ear'
+}
+
+# Magic numbers (file signatures) for common binary formats
+MAGIC_NUMBERS = {
+    b'\x89PNG\r\n\x1a\n': '.png',
+    b'\xff\xd8\xff': '.jpg',
+    b'GIF8': '.gif',
+    b'PK\x03\x04': '.zip',
+    b'%PDF': '.pdf',
+}
+
+def should_ignore(path: str, ignore_rules: List[str]) -> bool:
+    basename = os.path.basename(path)
+    for rule in ignore_rules:
+        if fnmatch(basename, rule):
+            return True
+        if os.path.isdir(path) and fnmatch(basename + "/", rule):
+            return True
+    return False
+
+def read_gitignore(directory: str) -> List[str]:
+    gitignore_path = os.path.join(directory, ".gitignore")
+    if os.path.isfile(gitignore_path):
+        with open(gitignore_path, "r") as f:
+            return [
+                line.strip()
+                for line in f
+                if line.strip() and not line.startswith("#")
+            ]
+    return []
+
+def add_line_numbers(content: str) -> str:
+    lines = content.splitlines()
+    padding = len(str(len(lines)))
+    numbered_lines = [f"{i+1:{padding}}  {line}" for i, line in enumerate(lines)]
+    return "\n".join(numbered_lines)
+
+def print_repo_tree(writer: Callable[[str], None], base_path: str, max_depth: int = 1):
+    """
+    Print a simplified repository tree (up to a certain depth).
+    Skips large subdirectories or deeply nested structures.
+    """
+    writer("\n[DATASET-MODE] Repository Tree Overview\n")
+    writer("----------------------------------------\n")
+
+    def walk_dir(current_path: str, depth: int = 0):
+        if depth > max_depth:
+            return
+        try:
+            entries = sorted(os.listdir(current_path))
+        except PermissionError:
+            return
+        dirs = []
+        files = []
+        for entry in entries:
+            full_entry = os.path.join(current_path, entry)
+            if os.path.isdir(full_entry):
+                dirs.append(entry)
+            else:
+                files.append(entry)
+        # Print dirs
+        for d in dirs:
+            rel_dir = os.path.relpath(os.path.join(current_path, d), base_path)
+            indent = "  " * depth
+            writer(f"{indent}📂 {rel_dir}/\n")
+            # If there's a huge subdir, let's not expand it (simple heuristic)
+            sub_entries = os.listdir(os.path.join(current_path, d))
+            if len(sub_entries) < 50:  # you can tweak this threshold
+                walk_dir(os.path.join(current_path, d), depth + 1)
+            else:
+                writer(f"{indent}  (... {len(sub_entries)} items omitted ...)\n")
+        # Print files
+        for f in files:
+            rel_file = os.path.relpath(os.path.join(current_path, f), base_path)
+            indent = "  " * depth
+            writer(f"{indent}📄 {rel_file}\n")
+
+    # Start from base_path
+    walk_dir(base_path, depth=0)
+    writer("\n")
+
+def print_file_summary(writer: Callable[[str], None], file_path: str):
+    """Print a lightweight file summary line."""
+    try:
+        size_bytes = os.path.getsize(file_path)
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        line_count = len(lines)
+        # Attempt to get a snippet from the first non-empty line
+        snippet = ""
+        for line in lines:
+            line_stripped = line.strip()
+            if line_stripped:
+                snippet = line_stripped[:60]  # 60 chars limit
+                break
+        summary = (
+            f"[SUMMARY] {file_path} | {size_bytes} bytes | {line_count} lines"
+            f"{f' | snippet: {snippet}' if snippet else ''}"
+        )
+        writer(f"{summary}\n")
+    except Exception:  # Remove the unused variable e
+        # fallback if any error reading file
+        writer(f"[SUMMARY] {file_path} (unavailable)\n")
+
+def print_default(
+    writer: Callable[[str], None],
+    path: str,
+    content: str,
+    line_numbers: bool,
+    dataset_mode: bool,
+) -> None:
+    """Print file content in plain text format, with optional dataset-mode delimiter."""
+    if dataset_mode:
+        # Unique delimiter for dataset mode
+        writer(f"\n===== FILE BEGIN: {path} =====\n")
+    else:
+        writer(f"{path}\n")
+        writer("---\n")
+
+    writer(add_line_numbers(content) if line_numbers else content)
+
+    if dataset_mode:
+        writer(f"\n===== FILE END: {path} =====\n\n")
+    else:
+        # Add newlines and marker for separation
+        writer("\n\n---\n\n")
+
+def print_as_xml(
+    writer: Callable[[str], None], 
+    path: str, 
+    content: str, 
+    line_numbers: bool
+) -> None:
+    global document_index
+    writer(f"<document index=\"{document_index}\">\n")
+    writer(f"<source>{path}</source>\n")
+    writer("<document_content>\n")
+    writer(add_line_numbers(content) if line_numbers else content)
+    writer("\n</document_content>\n")
+    writer("</document>\n")
+    document_index += 1
+
+def print_as_json(
+    writer: Callable[[str], None], 
+    path: str, 
+    content: str, 
+    line_numbers: bool
+) -> None:
+    """Print content in JSON format."""
+    data = {
+        "path": path,
+        "content": add_line_numbers(content) if line_numbers else content
+    }
+    writer(json.dumps(data))  # No newline for JSON array format
+
+def print_as_jsonl(
+    writer: Callable[[str], None], 
+    path: str, 
+    content: str, 
+    line_numbers: bool
+) -> None:
+    """Print content in JSONL format (one JSON object per line)."""
+    data = {
+        "path": path,
+        "content": add_line_numbers(content) if line_numbers else content
+    }
+    writer(json.dumps(data) + "\n")
+
+def print_path(writer: Callable[[str], None], path: str, content: str,
+               use_xml: bool, use_json: bool, use_jsonl: bool,
+               line_numbers: bool, dataset_mode: bool) -> None:
+    """
+    Print the file content using the selected output format,
+    optionally including dataset-mode extras.
+    """
+    if use_xml:
+        print_as_xml(writer, path, content, line_numbers)
+    elif use_json:
+        print_as_json(writer, path, content, line_numbers)
+    elif use_jsonl:
+        print_as_jsonl(writer, path, content, line_numbers)
+    else:
+        print_default(writer, path, content, line_numbers, dataset_mode)
+
+def should_include_file(
+    file_path: str,
+    extensions: tuple,
+    regex_pattern: Optional[str],
+    min_size: Optional[int],
+    max_size: Optional[int],
+    modified_after: Optional[datetime],
+) -> bool:
+    if extensions and not any(file_path.endswith(ext) for ext in extensions):
+        return False
+    if regex_pattern and not re.search(regex_pattern, file_path):
+        return False
+    try:
+        stats = os.stat(file_path)
+    except OSError:
+        return False
+    if min_size is not None and stats.st_size < min_size:
+        return False
+    if max_size is not None and stats.st_size > max_size:
+        return False
+    if modified_after is not None:
+        mod_time = datetime.fromtimestamp(stats.st_mtime)
+        if mod_time < modified_after:
+            return False
+    return True
+
+def is_binary_content(content: bytes, sample_size: int = 1024) -> bool:
+    """Check if content appears to be binary using a heuristic."""
+    if b'\x00' in content[:sample_size]:
+        return True
+
+    text_characters = (
+        b''.join(map(bytes, [range(32, 127)]))
+        + b''.join(map(bytes, [range(128, 256)]))
+        + b'\n\r\t\f\b'
+    )
+    non_text = sum(byte not in text_characters for byte in content[:sample_size])
+    return non_text / len(content[:sample_size]) > 0.30
+
+def is_binary_file(file_path: str) -> bool:
+    """Determine if a file is binary using multiple methods."""
+    # 1. Check extension first (fast path)
+    if any(file_path.lower().endswith(ext) for ext in BINARY_EXTENSIONS):
+        return True
+
+    try:
+        # 2. Read first 8KB for magic numbers and content analysis
+        with open(file_path, 'rb') as f:
+            header = f.read(8192)
+            if not header:
+                return False
+            # Check magic numbers
+            for magic, _ in MAGIC_NUMBERS.items():
+                if header.startswith(magic):
+                    return True
+            return is_binary_content(header)
+    except (OSError, IOError) as e:
+        err_console.print(
+            f"[warning]Warning: Error reading {file_path}: "
+            f"{str(e)}[/warning]"
+        )
+        return True  # Treat as binary on error
+
+    return False
+
+def process_local_path(
+    path: str,
+    extensions: tuple,
+    include_hidden: bool,
+    ignore_files_only: bool,
+    ignore_gitignore: bool,
+    gitignore_rules: List[str],
+    ignore_patterns: tuple,
+    writer: Callable[[str], None],
+    use_xml: bool,
+    use_json: bool,
+    use_jsonl: bool,
+    line_numbers: bool,
+    regex_pattern: Optional[str],
+    min_size: Optional[int],
+    max_size: Optional[int],
+    modified_after: Optional[datetime],
+    first_json_entry: bool,
+    dataset_mode: bool = False
+) -> int:
+    """Process a local path and print file contents based on filtering options."""
+    if not os.path.exists(path):
+        err_console.print(
+            f"[error]Error processing {path}: "
+            "No such file or directory[/error]"
+        )
+        return 1
+
+    try:
+        # If dataset_mode is on, print a quick tree overview
+        if dataset_mode and os.path.isdir(path):
+            print_repo_tree(writer, path, max_depth=1)
+
+        if os.path.isfile(path):
+            if should_include_file(
+                path, extensions, regex_pattern, min_size, max_size, modified_after
+            ):
+                if not is_binary_file(path):
+                    if dataset_mode:
+                        print_file_summary(writer, path)
+                    with open(path, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    print_path(
+                        writer,
+                        path,
+                        content,
+                        use_xml,
+                        use_json,
+                        use_jsonl,
+                        line_numbers,
+                        dataset_mode
+                    )
+        else:
+            for root, dirs, files in os.walk(path):
+                if not include_hidden:
+                    dirs[:] = [d for d in dirs if not d.startswith(".")]
+                    files = [f for f in files if not f.startswith(".")]
+
+                if not ignore_gitignore and gitignore_rules:
+                    dirs[:] = [
+                        d for d in dirs
+                        if (
+                            ignore_files_only or
+                            not should_ignore(os.path.join(root, d), gitignore_rules)
+                        )
+                    ]
+                    files = [
+                        f for f in files
+                        if not should_ignore(os.path.join(root, f), gitignore_rules)
+                    ]
+
+                if ignore_patterns:
+                    if not ignore_files_only:
+                        dirs[:] = [
+                            d for d in dirs
+                            if not any(
+                                fnmatch(d, pattern) for pattern in ignore_patterns
+                            )
+                        ]
+                    files = [
+                        f for f in files
+                        if not any(
+                            fnmatch(f, pattern) for pattern in ignore_patterns
+                        )
+                    ]
+
+                for file in sorted(files):
+                    file_path = os.path.join(root, file)
+                    if should_include_file(
+                        file_path,
+                        extensions,
+                        regex_pattern,
+                        min_size,
+                        max_size,
+                        modified_after
+                    ):
+                        if not is_binary_file(file_path):
+                            if dataset_mode:
+                                print_file_summary(writer, file_path)
+                            try:
+                                with open(file_path, "r", encoding="utf-8") as f:
+                                    content = f.read()
+                                print_path(
+                                    writer,
+                                    file_path,
+                                    content,
+                                    use_xml,
+                                    use_json,
+                                    use_jsonl,
+                                    line_numbers,
+                                    dataset_mode
+                                )
+                            except UnicodeDecodeError:
+                                continue
+    except Exception as e:
+        err_console.print(
+            f"[error]Error processing {path}: {str(e)}[/error]"
+        )
+        return 1
+
+    return 0
+
+def is_github_url(url: str) -> bool:
+    return bool(re.match(GITHUB_URL_PATTERN, url))
+
+def clone_github_repo(url: str) -> str:
+    temp_dir = tempfile.mkdtemp(prefix=TEMP_DIR_PREFIX)
+    try:
+        Repo.clone_from(url, temp_dir)
+        return temp_dir
+    except Exception as e:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise click.ClickException(
+            f"Failed to clone repository: {str(e)}"
+        ) from e
+
+def process_github_url(
+    url: str,
+    extensions: tuple,
+    include_hidden: bool,
+    ignore_files_only: bool,
+    ignore_gitignore: bool,
+    ignore_patterns: tuple,
+    writer: Callable[[str], None],
+    use_xml: bool,
+    use_json: bool,
+    use_jsonl: bool,
+    line_numbers: bool,
+    regex_pattern: Optional[str],
+    min_size: Optional[int],
+    max_size: Optional[int],
+    modified_after: Optional[datetime],
+    first_json_entry: bool,
+    dataset_mode: bool = False
+) -> None:
+    try:
+        temp_dir = clone_github_repo(url)
+        try:
+            rules = [] if ignore_gitignore else read_gitignore(temp_dir)
+            process_local_path(
+                temp_dir,
+                extensions,
+                include_hidden,
+                ignore_files_only,
+                ignore_gitignore,
+                rules,
+                ignore_patterns,
+                writer,
+                use_xml,
+                use_json,
+                use_jsonl,
+                line_numbers,
+                regex_pattern,
+                min_size,
+                max_size,
+                modified_after,
+                first_json_entry,
+                dataset_mode=dataset_mode
+            )
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+    except click.ClickException:
+        raise
+    except Exception as e:
+        raise click.ClickException(
+            f"Error processing GitHub repository: {str(e)}"
+        ) from e
+
+@click.command()
+@click.argument("paths", nargs=-1, type=str)
+@click.option(
+    "-e", "--extension",
+    "extensions",
+    multiple=True,
+    help="Filter by file extensions (e.g., -e py -e md)"
+)
+@click.option(
+    "--include-hidden",
+    is_flag=True,
+    help="Include files and folders starting with ."
+)
+@click.option(
+    "--ignore-files-only",
+    is_flag=True,
+    help="Apply --ignore option only to files"
+)
+@click.option(
+    "--ignore-gitignore",
+    is_flag=True,
+    help="Ignore .gitignore files and include all files"
+)
+@click.option(
+    "--ignore",
+    "ignore_patterns",
+    multiple=True,
+    default=[],
+    help="List of patterns to ignore"
+)
+@click.option(
+    "--regex",
+    "regex_pattern",
+    help="Filter files using a regular expression pattern"
+)
+@click.option(
+    "--min-size",
+    type=click.INT,
+    help="Filter files larger than size (in bytes)"
+)
+@click.option(
+    "--max-size",
+    type=click.INT,
+    help="Filter files smaller than size (in bytes)"
+)
+@click.option(
+    "--modified-after",
+    type=click.DateTime(),
+    help="Filter files modified after date (YYYY-MM-DD)"
+)
+@click.option(
+    "-o", "--output",
+    "output_file",
+    type=click.Path(writable=True),
+    help="Output to a file instead of stdout"
+)
+@click.option(
+    "-c", "--cxml",
+    "use_xml",
+    is_flag=True,
+    help="Output in Claude XML format"
+)
+@click.option(
+    "-j", "--json",
+    "use_json",
+    is_flag=True,
+    help="Output in JSON array format"
+)
+@click.option(
+    "-l", "--jsonl",
+    "use_jsonl",
+    is_flag=True,
+    help="Output in JSONL format (one JSON object per line)"
+)
+@click.option(
+    "-n", "--line-numbers",
+    is_flag=True,
+    help="Add line numbers to the output"
+)
+@click.option(
+    "--dataset-mode",
+    is_flag=True,
+    help="Enable special formatting & metadata for fine-tuning dataset prep"
+)
+@click.version_option()
+def cli(
+    paths,
+    extensions,
+    include_hidden,
+    ignore_files_only,
+    ignore_gitignore,
+    ignore_patterns,
+    regex_pattern,
+    min_size,
+    max_size,
+    modified_after,
+    output_file,
+    use_xml,
+    use_json,
+    use_jsonl,
+    line_numbers,
+    dataset_mode
+):
+    """Process and filter code from files and GitHub repositories.
+    
+    With --dataset-mode enabled, outputs a simplified repo tree (if path is a
+    directory), provides short file summaries, and uses special delimiters.
+    This is especially helpful when preparing fine-tuning datasets.
+    """
+    err_console.print("[info]🔍 ContextForge - Processing files...[/info]")
+
+    # Validate regex pattern
+    if regex_pattern:
+        try:
+            re.compile(regex_pattern)
+        except re.error as e:
+            err_console.print(f"[error]Invalid regex pattern: {regex_pattern}[/error]")
+            raise click.ClickException(
+                f"Invalid regex pattern: {regex_pattern}"
+            ) from e
+
+    if sum([use_xml, use_json, use_jsonl]) > 1:
+        raise click.ClickException("Cannot use multiple output formats simultaneously")
+
+    output_stream = None
+    if output_file:
+        output_stream = open(output_file, "w", encoding="utf-8")
+        writer = output_stream.write
+    else:
+        def writer(s: str) -> None:
+            click.echo(s, nl=False)
+
+    if use_xml:
+        writer("<documents>\n")
+    elif use_json:
+        writer("[\n")  # Start JSON array
+
+    # Process each provided path
+    first_json_entry = True
+    for path in paths:
+        # For local paths, if the path does not exist, raise an error.
+        if not is_github_url(path) and not os.path.exists(path):
+            msg = f"Error processing {path}: No such file or directory"
+            raise click.ClickException(msg)
+        try:
+            if is_github_url(path):
+                process_github_url(
+                    path,
+                    extensions,
+                    include_hidden,
+                    ignore_files_only,
+                    ignore_gitignore,
+                    ignore_patterns,
+                    writer,
+                    use_xml,
+                    use_json,
+                    use_jsonl,
+                    line_numbers,
+                    regex_pattern,
+                    min_size,
+                    max_size,
+                    modified_after,
+                    first_json_entry,
+                    dataset_mode=dataset_mode
+                )
+            else:
+                rules = [] if ignore_gitignore else read_gitignore(path)
+                result = process_local_path(
+                    path,
+                    extensions,
+                    include_hidden,
+                    ignore_files_only,
+                    ignore_gitignore,
+                    rules,
+                    ignore_patterns,
+                    writer,
+                    use_xml,
+                    use_json,
+                    use_jsonl,
+                    line_numbers,
+                    regex_pattern,
+                    min_size,
+                    max_size,
+                    modified_after,
+                    first_json_entry,
+                    dataset_mode=dataset_mode
+                )
+                if result != 0:
+                    raise click.ClickException(f"Error processing {path}")
+            first_json_entry = False
+        except click.ClickException as e:
+            err_console.print(f"[error]{str(e)}[/error]")
+            raise e
+
+    if use_xml:
+        writer("</documents>\n")
+    elif use_json:
+        writer("\n]\n")  # End JSON array
+
+    if output_stream:
+        output_stream.close()
+
+    err_console.print("\n[success]✨ Processing complete![/success]")
+    return 0
+
+if __name__ == "__main__":
+    cli()
+
+---
+
+/Users/jesper/Projects/Dev_projects/Tools/ContextForge/finetune.py
+---
+#!/usr/bin/env python3
+import ast
+import json
+import os
+import random
+import shutil
+import subprocess
+import tempfile
+from typing import Dict, List
+
+import vertexai
+
+# Vertex AI imports
+from rich.console import Console
+from vertexai.language_models import TextGenerationModel
+from vertexai.preview.generative_models import GenerativeModel
+
+# Initialize Rich console for better error messages
+console = Console()
+
+# ---------- CONFIGURATION ----------
+# Repository URLs
+REPO_URL = "https://github.com/unit8co/darts"
+# Output directory for training data
+DATA_DIR = "./data"
+TRAIN_FILE = os.path.join(DATA_DIR, "train.jsonl")
+VALID_FILE = os.path.join(DATA_DIR, "valid.jsonl")
+# Percentage split for training (e.g., 90% train, 10% valid)
+TRAIN_SPLIT = 0.9
+# MLX fine-tuning command template
+MLX_CMD = (
+    "mlx_lm.lora --model mlx-community/DeepSeek-R1-Distill-Qwen-1.5B "
+    "--train --data ./data --iters 100 "
+    "--batch-size 4 --learning-rate 1e-4 "
+    "--steps-per-report 10 --steps-per-eval 50 "
+    "--val-batches 20 --adapter-path docstring_adapter"
+)
+
+try:
+    # Initialize Vertex AI with project and location from environment variables
+    project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
+    location = os.getenv('GOOGLE_CLOUD_LOCATION', 'us-central1')
+    
+    if not project_id:
+        raise ValueError("GOOGLE_CLOUD_PROJECT environment variable not set")
+    
+    # Initialize Vertex AI
+    vertexai.init(project=project_id, location=location)
+    
+    # Initialize the Gemini model for code generation
+    model = GenerativeModel("gemini-1.0-pro")
+    
+    # Also initialize a code-specific model as backup
+    code_model = TextGenerationModel.from_pretrained("code-bison@002")
+    
+    console.print("[green]Successfully initialized Vertex AI models[/green]")
+except Exception as e:
+    console.print(f"[red]Error initializing Vertex AI: {str(e)}[/red]")
+    console.print("[yellow]Please ensure you have:")
+    console.print("1. Set GOOGLE_CLOUD_PROJECT environment variable")
+    console.print("2. Set GOOGLE_CLOUD_LOCATION environment variable (defaults to us-central1)")
+    console.print("3. Authenticated: gcloud auth application-default login")
+    console.print("4. Enabled Vertex AI API: gcloud services enable aiplatform.googleapis.com[/yellow]")
+    raise
+
+def clone_repository(repo_url: str, dest_dir: str) -> None:
+    """Clone the given repository URL into dest_dir."""
+    if os.path.exists(dest_dir):
+        shutil.rmtree(dest_dir)
+    subprocess.run(["git", "clone", repo_url, dest_dir], check=True)
+    print(f"Cloned repository into {dest_dir}")
+
+def run_contextforge(repo_path: str, output_json: str) -> None:
+    """Run ContextForge on the repo_path and write JSONL output to output_json."""
+    cmd = ["contextforge", repo_path, "-l", "-o", output_json]
+    subprocess.run(cmd, check=True)
+    print(f"ContextForge output written to {output_json}")
+
+async def enhance_qa_pair(prompt: str, completion: str) -> List[Dict[str, str]]:
+    """Use Vertex AI to enhance Q/A pairs with variations."""
+    # Combine system prompt and context into a single user message
+    system_prompt = """You are an expert Python developer creating training data for a code assistant.
+    Given a function and its docstring, create 4-5 diverse training examples that cover:
+    1. Code corrections (e.g., fixing bugs, improving error handling)
+    2. Natural language to code transformations
+    3. Framework additions (e.g., adding type hints, logging, testing)
+    4. Code optimizations with explanations
+    5. Multi-turn debugging conversations
+
+    Return only in this format:
+    TYPE: <type of example>
+    Q: <question/prompt>
+    A: <detailed answer with code>"""
+    
+    context = f"Function:\n{completion}\n\nDocstring:\n{prompt}"
+    full_prompt = f"{system_prompt}\n\nNow analyze this:\n{context}"
+    
+    try:
+        # Try with Gemini Pro first
+        response = model.generate_content(
+            full_prompt,
+            generation_config={
+                "temperature": 0.7,
+                "top_p": 0.95,
+                "top_k": 40,
+                "max_output_tokens": 8192,
+            },
+            safety_settings={
+                "harassment": "block_none",
+                "hate_speech": "block_none",
+                "sexually_explicit": "block_none",
+                "dangerous_content": "block_none"
+            }
+        )
+        
+        if not response.text:
+            raise ValueError("Empty response from Gemini model")
+            
+    except Exception as e:
+        console.print(f"[yellow]Gemini model failed: {str(e)}. Falling back to Code Bison...[/yellow]")
+        try:
+            # Fallback to Code Bison
+            response = code_model.predict(
+                full_prompt,
+                temperature=0.7,
+                max_output_tokens=8192,
+                top_k=40,
+                top_p=0.95,
+            )
+            if not response.text:
+                raise ValueError("Empty response from Code Bison model")
+        except Exception as fallback_e:
+            console.print(f"[red]Both models failed. Error: {str(fallback_e)}[/red]")
+            return []
+    
+    qa_pairs = []
+    current_type = None
+    current_q = None
+    current_a = None
+    
+    try:
+        for line in response.text.split('\n'):
+            if line.startswith('TYPE:'):
+                if current_q and current_a:
+                    qa_pairs.append({
+                        "prompt": f"[{current_type}] {current_q.strip()}", 
+                        "completion": current_a.strip()
+                    })
+                current_type = line[5:].strip()
+                current_q = None
+                current_a = None
+            elif line.startswith('Q:'):
+                if current_q and current_a:
+                    qa_pairs.append({
+                        "prompt": f"[{current_type}] {current_q.strip()}", 
+                        "completion": current_a.strip()
+                    })
+                current_q = line[2:].strip()
+                current_a = None
+            elif line.startswith('A:'):
+                current_a = line[2:].strip()
+        
+        # Don't forget the last pair
+        if current_type and current_q and current_a:
+            qa_pairs.append({
+                "prompt": f"[{current_type}] {current_q.strip()}", 
+                "completion": current_a.strip()
+            })
+    except Exception as parse_e:
+        console.print(f"[red]Error parsing model response: {str(parse_e)}[/red]")
+        return []
+    
+    return qa_pairs
+
+async def extract_qa_pairs_from_python(json_file: str) -> List[Dict[str, str]]:
+    """Parse the ContextForge JSONL output and extract coding examples."""
+    qa_pairs = []
+    files = []
+    
+    # Read JSONL format
+    with open(json_file, "r", encoding="utf-8") as f:
+        for line in f:
+            try:
+                file_data = json.loads(line.strip())
+                if isinstance(file_data, dict) and "path" in file_data and "content" in file_data:
+                    files.append(file_data)
+            except json.JSONDecodeError:
+                continue
+
+    # Process each file
+    for file in files:
+        if not file["path"].endswith(".py"):
+            continue
+        try:
+            tree = ast.parse(file["content"])
+        except Exception:
+            continue
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                func_source = ast.get_source_segment(file["content"], node)
+                if func_source:
+                    docstring = ast.get_docstring(node, clean=True)
+                    if docstring:
+                        # Create implementation example
+                        prompt = f"Implement a Python function based on this description:\n{docstring}"
+                        completion = func_source.strip()
+                        qa_pairs.append({"prompt": prompt, "completion": completion})
+                        
+                        # Create docstring example
+                        prompt = f"Write a detailed docstring for the following function:\n\n{func_source.strip()}"
+                        qa_pairs.append({"prompt": prompt, "completion": docstring.strip()})
+                        
+                        # Add enhanced Q/A pairs using Vertex AI
+                        enhanced_pairs = await enhance_qa_pair(docstring, func_source)
+                        qa_pairs.extend(enhanced_pairs)
+
+    return qa_pairs
+
+def split_and_write_dataset(qa_pairs: List[Dict[str, str]], train_file: str, valid_file: str, train_split: float = 0.9) -> None:
+    """Shuffle and split qa_pairs into training and validation sets."""
+    random.shuffle(qa_pairs)
+    split_idx = int(len(qa_pairs) * train_split)
+    train_data = qa_pairs[:split_idx]
+    valid_data = qa_pairs[split_idx:]
+    
+    os.makedirs(os.path.dirname(train_file), exist_ok=True)
+    with open(train_file, "w", encoding="utf-8") as tf:
+        for entry in train_data:
+            tf.write(json.dumps(entry) + "\n")
+    with open(valid_file, "w", encoding="utf-8") as vf:
+        for entry in valid_data:
+            vf.write(json.dumps(entry) + "\n")
+            
+    print(f"Wrote {len(train_data)} training examples to {train_file}")
+    print(f"Wrote {len(valid_data)} validation examples to {valid_file}")
+
+async def main():
+    # Create a temporary directory for cloning the repo and ContextForge output
+    with tempfile.TemporaryDirectory() as temp_dir:
+        repo_dir = os.path.join(temp_dir, "darts")
+        output_json = os.path.join(temp_dir, "darts_context.json")
+        
+        # 1. Clone the repository
+        clone_repository(REPO_URL, repo_dir)
+        
+        # 2. Run ContextForge on the repository to produce JSON output
+        run_contextforge(repo_dir, output_json)
+        
+        # 3. Extract Q/A pairs from the JSON output
+        qa_pairs = await extract_qa_pairs_from_python(output_json)
+        if not qa_pairs:
+            print("No QA pairs extracted. Check if the repository contains Python files with functions and docstrings.")
+            return
+            
+        # 4. Split and write dataset to disk
+        split_and_write_dataset(qa_pairs, TRAIN_FILE, VALID_FILE, TRAIN_SPLIT)
+    
+    # 5. Print the MLX fine-tuning command
+    print("\nDataset is ready. To fine-tune using MLX with LoRA, run the following command:")
+    print(MLX_CMD)
+    
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
+
+---
+
+/Users/jesper/Projects/Dev_projects/Tools/ContextForge/test_model.py
+---
+import subprocess
+from typing import Dict, List
+
+from rich.console import Console
+from rich.table import Table
+
+console = Console()
+
+TEST_CASES = [
+    {
+        "type": "implementation",
+        "prompt": "Write a function to calculate the Fibonacci sequence up to n terms with memoization",
+        "expected_features": ["memoization", "type hints", "docstring", "error handling"]
+    },
+    {
+        "type": "debugging",
+        "prompt": "Fix this code:\ndef divide(a,b): return a/b",
+        "expected_features": ["type hints", "error handling", "input validation"]
+    },
+    {
+        "type": "optimization",
+        "prompt": "Optimize this function:\ndef find_duplicates(lst): return [x for x in lst if lst.count(x) > 1]",
+        "expected_features": ["time complexity", "space optimization", "algorithm choice"]
+    }
+]
+
+def evaluate_response(response: str, expected_features: List[str]) -> Dict[str, bool]:
+    """Evaluate model response against expected features."""
+    results = {}
+    for feature in expected_features:
+        if feature == "memoization":
+            results[feature] = "@cache" in response or "memo" in response.lower()
+        elif feature == "type hints":
+            results[feature] = "->" in response and ":" in response
+        elif feature == "error handling":
+            results[feature] = "try" in response and "except" in response
+        elif feature == "input validation":
+            results[feature] = any(x in response.lower() for x in ["if not", "isinstance", "raise"])
+        elif feature == "time complexity":
+            results[feature] = "O(" in response or any(x in response.lower() for x in ["complexity", "efficient"])
+    return results
+
+def run_tests(model_path: str) -> None:
+    """Run tests against the fine-tuned model."""
+    table = Table(title="Model Evaluation Results")
+    table.add_column("Test Type")
+    table.add_column("Expected Features")
+    table.add_column("Found Features")
+    table.add_column("Score")
+    
+    for test in TEST_CASES:
+        try:
+            cmd = f"python -m mlx_lm.generate --model {model_path} --adapter-path docstring_adapter"
+            response = subprocess.run(
+                cmd,
+                shell=True,
+                input=test["prompt"],
+                capture_output=True,
+                text=True
+            ).stdout
+            
+            results = evaluate_response(response, test["expected_features"])
+            score = sum(results.values()) / len(results)
+            
+            table.add_row(
+                test["type"],
+                ", ".join(test["expected_features"]),
+                ", ".join(k for k, v in results.items() if v),
+                f"{score:.2%}"
+            )
+        except Exception as e:
+            console.print(f"[red]Error running test {test['type']}: {str(e)}[/red]")
+    
+    console.print(table)
+
+if __name__ == "__main__":
+    run_tests("mlx-community/DeepSeek-R1-Distill-Qwen-1.5B") 
+
+---
+
+/Users/jesper/Projects/Dev_projects/Tools/ContextForge/tests/test_contextforge.py
+---
+import os
+from datetime import datetime, timedelta
+from unittest import mock
+from unittest.mock import MagicMock, patch
+
+import pytest
+from click.testing import CliRunner
+
+from contextforge import cli, is_github_url
+
+
+def test_basic_functionality(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        with open("test_dir/file1.txt", "w") as f:
+            f.write("Contents of file1")
+        with open("test_dir/file2.txt", "w") as f:
+            f.write("Contents of file2")
+
+        result = runner.invoke(cli, ["test_dir"])
+        assert result.exit_code == 0
+        assert "test_dir/file1.txt" in result.output
+        assert "Contents of file1" in result.output
+        assert "test_dir/file2.txt" in result.output
+        assert "Contents of file2" in result.output
+
+
+def test_include_hidden(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        with open("test_dir/.hidden.txt", "w") as f:
+            f.write("Contents of hidden file")
+
+        result = runner.invoke(cli, ["test_dir"])
+        assert result.exit_code == 0
+        assert "test_dir/.hidden.txt" not in result.output
+
+        result = runner.invoke(cli, ["test_dir", "--include-hidden"])
+        assert result.exit_code == 0
+        assert "test_dir/.hidden.txt" in result.output
+        assert "Contents of hidden file" in result.output
+
+
+def test_ignore_gitignore(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        with open("test_dir/.gitignore", "w") as f:
+            f.write("ignored.txt")
+        with open("test_dir/ignored.txt", "w") as f:
+            f.write("This file should be ignored")
+        with open("test_dir/included.txt", "w") as f:
+            f.write("This file should be included")
+
+        result = runner.invoke(cli, ["test_dir"])
+        assert result.exit_code == 0
+        assert "test_dir/ignored.txt" not in result.output
+        assert "test_dir/included.txt" in result.output
+
+        result = runner.invoke(cli, ["test_dir", "--ignore-gitignore"])
+        assert result.exit_code == 0
+        assert "test_dir/ignored.txt" in result.output
+        assert "This file should be ignored" in result.output
+        assert "test_dir/included.txt" in result.output
+
+
+def test_multiple_paths(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir1")
+        with open("test_dir1/file1.txt", "w") as f:
+            f.write("Contents of file1")
+        os.makedirs("test_dir2")
+        with open("test_dir2/file2.txt", "w") as f:
+            f.write("Contents of file2")
+        with open("single_file.txt", "w") as f:
+            f.write("Contents of single file")
+
+        result = runner.invoke(cli, ["test_dir1", "test_dir2", "single_file.txt"])
+        assert result.exit_code == 0
+        assert "test_dir1/file1.txt" in result.output
+        assert "Contents of file1" in result.output
+        assert "test_dir2/file2.txt" in result.output
+        assert "Contents of file2" in result.output
+        assert "single_file.txt" in result.output
+        assert "Contents of single file" in result.output
+
+
+def test_ignore_patterns(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir", exist_ok=True)
+        with open("test_dir/file_to_ignore.txt", "w") as f:
+            f.write("This file should be ignored due to ignore patterns")
+        with open("test_dir/file_to_include.txt", "w") as f:
+            f.write("This file should be included")
+
+        result = runner.invoke(cli, ["test_dir", "--ignore", "*.txt"])
+        assert result.exit_code == 0
+        assert "test_dir/file_to_ignore.txt" not in result.output
+        assert "This file should be ignored due to ignore patterns" not in result.output
+        assert "test_dir/file_to_include.txt" not in result.output
+
+        os.makedirs("test_dir/test_subdir", exist_ok=True)
+        with open("test_dir/test_subdir/any_file.txt", "w") as f:
+            f.write("This entire subdirectory should be ignored due to ignore patterns")
+        result = runner.invoke(cli, ["test_dir", "--ignore", "*subdir*"])
+        assert result.exit_code == 0
+        assert "test_dir/test_subdir/any_file.txt" not in result.output
+        assert (
+            "This entire subdirectory should be ignored due to ignore patterns"
+            not in result.output
+        )
+        assert "test_dir/file_to_include.txt" in result.output
+        assert "This file should be included" in result.output
+        assert "This file should be included" in result.output
+
+        result = runner.invoke(cli, ["test_dir", "--ignore", "*subdir*", "--ignore-files-only"])
+        assert result.exit_code == 0
+        assert "test_dir/test_subdir/any_file.txt" in result.output
+
+        result = runner.invoke(cli, ["test_dir", "--ignore", ""])
+
+
+def test_specific_extensions(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        # Write one.txt one.py two/two.txt two/two.py three.md
+        os.makedirs("test_dir/two")
+        with open("test_dir/one.txt", "w") as f:
+            f.write("This is one.txt")
+        with open("test_dir/one.py", "w") as f:
+            f.write("This is one.py")
+        with open("test_dir/two/two.txt", "w") as f:
+            f.write("This is two/two.txt")
+        with open("test_dir/two/two.py", "w") as f:
+            f.write("This is two/two.py")
+        with open("test_dir/three.md", "w") as f:
+            f.write("This is three.md")
+
+        # Try with -e py -e md
+        result = runner.invoke(cli, ["test_dir", "-e", "py", "-e", "md"])
+        assert result.exit_code == 0
+        assert ".txt" not in result.output
+        assert "test_dir/one.py" in result.output
+        assert "test_dir/two/two.py" in result.output
+        assert "test_dir/three.md" in result.output
+
+
+def test_mixed_paths_with_options(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        with open("test_dir/.gitignore", "w") as f:
+            f.write("ignored_in_gitignore.txt\n.hidden_ignored_in_gitignore.txt")
+        with open("test_dir/ignored_in_gitignore.txt", "w") as f:
+            f.write("This file should be ignored by .gitignore")
+        with open("test_dir/.hidden_ignored_in_gitignore.txt", "w") as f:
+            f.write("This hidden file should be ignored by .gitignore")
+        with open("test_dir/included.txt", "w") as f:
+            f.write("This file should be included")
+        with open("test_dir/.hidden_included.txt", "w") as f:
+            f.write("This hidden file should be included")
+        with open("single_file.txt", "w") as f:
+            f.write("Contents of single file")
+
+        result = runner.invoke(cli, ["test_dir", "single_file.txt"])
+        assert result.exit_code == 0
+        assert "test_dir/ignored_in_gitignore.txt" not in result.output
+        assert "test_dir/.hidden_ignored_in_gitignore.txt" not in result.output
+        assert "test_dir/included.txt" in result.output
+        assert "test_dir/.hidden_included.txt" not in result.output
+        assert "single_file.txt" in result.output
+        assert "Contents of single file" in result.output
+
+        result = runner.invoke(cli, ["test_dir", "single_file.txt", "--include-hidden"])
+        assert result.exit_code == 0
+        assert "test_dir/ignored_in_gitignore.txt" not in result.output
+        assert "test_dir/.hidden_ignored_in_gitignore.txt" not in result.output
+        assert "test_dir/included.txt" in result.output
+        assert "test_dir/.hidden_included.txt" in result.output
+        assert "single_file.txt" in result.output
+        assert "Contents of single file" in result.output
+
+        result = runner.invoke(
+            cli, ["test_dir", "single_file.txt", "--ignore-gitignore"]
+        )
+        assert result.exit_code == 0
+        assert "test_dir/ignored_in_gitignore.txt" in result.output
+        assert "test_dir/.hidden_ignored_in_gitignore.txt" not in result.output
+        assert "test_dir/included.txt" in result.output
+        assert "test_dir/.hidden_included.txt" not in result.output
+        assert "single_file.txt" in result.output
+        assert "Contents of single file" in result.output
+
+        result = runner.invoke(
+            cli,
+            ["test_dir", "single_file.txt", "--ignore-gitignore", "--include-hidden"],
+        )
+        assert result.exit_code == 0
+        assert "test_dir/ignored_in_gitignore.txt" in result.output
+        assert "test_dir/.hidden_ignored_in_gitignore.txt" in result.output
+        assert "test_dir/included.txt" in result.output
+        assert "test_dir/.hidden_included.txt" in result.output
+        assert "single_file.txt" in result.output
+        assert "Contents of single file" in result.output
+
+
+def test_binary_file_warning(tmpdir):
+    runner = CliRunner(mix_stderr=False)
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        with open("test_dir/binary_file.bin", "wb") as f:
+            f.write(b"\xff")
+        with open("test_dir/text_file.txt", "w") as f:
+            f.write("This is a text file")
+
+        result = runner.invoke(cli, ["test_dir"])
+        assert result.exit_code == 0
+
+        stdout = result.stdout
+        stderr = result.stderr
+
+        assert "test_dir/text_file.txt" in stdout
+        assert "This is a text file" in stdout
+        assert "\ntest_dir/binary_file.bin" not in stdout
+        assert (
+            "Warning: Skipping file test_dir/binary_file.bin due to UnicodeDecodeError"
+            in stderr
+        )
+
+
+@pytest.mark.parametrize(
+    "args", (["test_dir"], ["test_dir/file1.txt", "test_dir/file2.txt"])
+)
+def test_xml_format_dir(tmpdir, args):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        with open("test_dir/file1.txt", "w") as f:
+            f.write("Contents of file1.txt")
+        with open("test_dir/file2.txt", "w") as f:
+            f.write("Contents of file2.txt")
+        result = runner.invoke(cli, args + ["--cxml"])
+        assert result.exit_code == 0
+        actual = result.output
+        expected = """
+<documents>
+<document index="1">
+<source>test_dir/file1.txt</source>
+<document_content>
+Contents of file1.txt
+</document_content>
+</document>
+<document index="2">
+<source>test_dir/file2.txt</source>
+<document_content>
+Contents of file2.txt
+</document_content>
+</document>
+</documents>
+"""
+        assert expected.strip() == actual.strip()
+
+
+@pytest.mark.parametrize("arg", ("-o", "--output"))
+def test_output_option(tmpdir, arg):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        with open("test_dir/file1.txt", "w") as f:
+            f.write("Contents of file1.txt")
+        with open("test_dir/file2.txt", "w") as f:
+            f.write("Contents of file2.txt")
+        output_file = "output.txt"
+        result = runner.invoke(
+            cli, ["test_dir", arg, output_file], catch_exceptions=False
+        )
+        assert result.exit_code == 0
+        assert not result.output
+        with open(output_file, "r") as f:
+            actual = f.read()
+            
+        # Normalize newlines and whitespace for comparison
+        def normalize(text):
+            # Split by double newlines to preserve empty lines between entries
+            entries = text.strip().split("\n\n")
+            # Normalize each entry
+            normalized_entries = [
+                "\n".join(line.strip() for line in entry.split("\n"))
+                for entry in entries
+            ]
+            # Join entries with double newlines
+            return "\n\n".join(normalized_entries)
+            
+        expected = """test_dir/file1.txt
+---
+Contents of file1.txt
+
+---
+
+test_dir/file2.txt
+---
+Contents of file2.txt
+
+---"""
+        # Print actual and expected for debugging
+        print("\nActual output:")
+        print(repr(actual))
+        print("\nExpected output:")
+        print(repr(expected))
+        assert actual.strip() == expected.strip()
+
+
+def test_line_numbers(tmpdir):
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        test_content = "First line\nSecond line\nThird line\nFourth line\n"
+        with open("test_dir/multiline.txt", "w") as f:
+            f.write(test_content)
+
+        result = runner.invoke(cli, ["test_dir"])
+        assert result.exit_code == 0
+        assert "1  First line" not in result.output
+        assert test_content in result.output
+
+        result = runner.invoke(cli, ["test_dir", "-n"])
+        assert result.exit_code == 0
+        assert "1  First line" in result.output
+        assert "2  Second line" in result.output
+        assert "3  Third line" in result.output
+        assert "4  Fourth line" in result.output
+
+        result = runner.invoke(cli, ["test_dir", "--line-numbers"])
+        assert result.exit_code == 0
+        assert "1  First line" in result.output
+        assert "2  Second line" in result.output
+        assert "3  Third line" in result.output
+        assert "4  Fourth line" in result.output
+
+
+def test_github_url_detection():
+    """Test GitHub URL detection functionality."""
+    valid_urls = [
+        "https://github.com/user/repo",
+        "http://github.com/user/repo",
+        "https://github.com/organization/project-name",
+    ]
+    invalid_urls = [
+        "https://gitlab.com/user/repo",
+        "https://github.com/only-user",
+        "https://example.com/user/repo",
+    ]
+    
+    for url in valid_urls:
+        assert is_github_url(url) is True
+        
+    for url in invalid_urls:
+        assert is_github_url(url) is False
+
+
+@patch('contextforge.Repo')
+def test_github_repo_cloning(mock_repo):
+    """Test GitHub repository cloning functionality."""
+    runner = CliRunner()
+    mock_repo.clone_from = MagicMock()
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ["https://github.com/user/repo"])
+        assert result.exit_code == 0
+        mock_repo.clone_from.assert_called_once_with(
+            "https://github.com/user/repo",
+            mock.ANY
+        )
+
+
+def test_enhanced_filtering(tmpdir):
+    """Test enhanced filtering capabilities."""
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        # Create test files with different sizes and dates
+        os.makedirs("test_dir")
+        
+        # Create files with different sizes
+        with open("test_dir/small.txt", "w") as f:
+            f.write("small")  # 5 bytes
+        with open("test_dir/medium.txt", "w") as f:
+            f.write("medium" * 100)  # 600 bytes
+        with open("test_dir/large.txt", "w") as f:
+            f.write("large" * 1000)  # 5000 bytes
+            
+        # Test size filtering
+        result = runner.invoke(cli, ["test_dir", "--min-size", "500"])
+        assert result.exit_code == 0
+        assert "small.txt" not in result.output
+        assert "medium.txt" in result.output
+        assert "large.txt" in result.output
+        
+        result = runner.invoke(cli, ["test_dir", "--max-size", "1000"])
+        assert result.exit_code == 0
+        assert "small.txt" in result.output
+        assert "medium.txt" in result.output
+        assert "large.txt" not in result.output
+        
+        # Test regex filtering
+        result = runner.invoke(cli, ["test_dir", "--regex", "medium.*"])
+        assert result.exit_code == 0
+        assert "small.txt" not in result.output
+        assert "medium.txt" in result.output
+        assert "large.txt" not in result.output
+
+
+def test_modification_time_filtering(tmpdir):
+    """Test file modification time filtering."""
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        
+        # Create files with different modification times
+        with open("test_dir/old.txt", "w") as f:
+            f.write("old file")
+        with open("test_dir/new.txt", "w") as f:
+            f.write("new file")
+            
+        # Set old file's modification time to 2 days ago
+        old_time = datetime.now() - timedelta(days=2)
+        os.utime("test_dir/old.txt", (old_time.timestamp(), old_time.timestamp()))
+        
+        # Test modification time filtering
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        result = runner.invoke(cli, ["test_dir", "--modified-after", yesterday])
+        assert result.exit_code == 0
+        assert "old.txt" not in result.output
+        assert "new.txt" in result.output
+
+
+def test_combined_filtering(tmpdir):
+    """Test multiple filtering criteria combined."""
+    runner = CliRunner()
+    with tmpdir.as_cwd():
+        os.makedirs("test_dir")
+        
+        # Create test files
+        files = {
+            "test_small.py": "small py",  # 8 bytes
+            "test_medium.py": "medium" * 100,  # 600 bytes
+            "prod_large.py": "large" * 1000,  # 5000 bytes
+            "test_other.txt": "other",  # 5 bytes
+        }
+        
+        for name, content in files.items():
+            with open(f"test_dir/{name}", "w") as f:
+                f.write(content)
+        
+        # Test combined filtering (extension + regex + size)
+        result = runner.invoke(cli, [
+            "test_dir",
+            "-e", "py",
+            "--regex", "test_.*",
+            "--min-size", "100",
+            "--max-size", "1000"
+        ])
+        
+        assert result.exit_code == 0
+        assert "test_small.py" not in result.output  # too small
+        assert "test_medium.py" in result.output  # matches all criteria
+        assert "prod_large.py" not in result.output  # doesn't match regex
+        assert "test_other.txt" not in result.output  # wrong extension
+
+
+def test_error_handling(tmpdir):
+    """Test error handling for various scenarios."""
+    runner = CliRunner(mix_stderr=False)
+    with tmpdir.as_cwd():
+        # Test invalid regex pattern
+        result = runner.invoke(cli, [".", "--regex", "[invalid"])
+        assert result.exit_code == 1
+        assert "Invalid regex pattern: [invalid" in result.stderr
+
+        # Test non-existent path
+        result = runner.invoke(cli, ["non_existent_path"])
+        assert result.exit_code == 1
+        assert "Error processing non_existent_path" in result.stderr
+
+---
+

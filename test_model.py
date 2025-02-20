@@ -1,8 +1,8 @@
-import json
+import subprocess
+from typing import Dict, List
+
 from rich.console import Console
 from rich.table import Table
-import subprocess
-from typing import List, Dict, Any
 
 console = Console()
 

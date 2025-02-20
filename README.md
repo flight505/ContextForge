@@ -44,6 +44,7 @@ ContextForge is a powerful command-line tool that helps you process and filter c
 
 - 🛠️ **Developer Friendly**
   - Clean, intuitive CLI with rich console output
+  - **Dataset-Mode Option**: Generate structured output for fine-tuning tasks (see [Dataset Mode](#dataset-mode))
   - Comprehensive error handling
   - Memory-efficient processing
   - Extensive documentation
@@ -110,6 +111,22 @@ contextforge src tests \
     --ignore-files-only
 ```
 
+### Dataset Mode
+
+```bash
+# Produce a structured output for fine-tuning tasks, including:
+#   - Pruned tree overview of the repo or directory
+#   - Per-file metadata (size, lines)
+#   - Clear delimiters between files
+contextforge . --dataset-mode
+```
+
+When `--dataset-mode` is used:
+- Each directory is prefaced with a pruned tree showing top-level structure
+- Each file is separated by clear delimiters (e.g., `===== File: path =====`)
+- Basic file metadata (size in bytes, line count) appears before the content
+- Works only in plain text mode (not JSON/XML/JSONL)
+
 ## 🎯 Common Use Cases
 
 ### AI Model Training
@@ -118,8 +135,8 @@ contextforge src tests \
 # Prepare training data in JSONL format
 contextforge . -e py -l -o training.jsonl
 
-# Extract documentation with XML format
-contextforge . -e py -e md --cxml -o docs.xml
+# If you want a more structured plain-text output for fine-tuning:
+contextforge . --dataset-mode -e py -o dataset.txt
 ```
 
 ### Code Review
@@ -160,11 +177,12 @@ contextforge https://github.com/flight505/example-repo \
 | `--modified-after` | Filter by modification date |
 | `--include-hidden` | Include hidden files |
 | `--ignore` | Patterns to ignore |
-| `--ignore-files-only` | Apply ignore patterns to files only |
+| `--ignore-files-only` | Apply --ignore option only to files |
 | `--ignore-gitignore` | Ignore .gitignore rules |
+| `--dataset-mode` | Generate structured output for fine-tuning tasks |
 | `-c, --cxml` | Output in Claude XML format |
 | `-j, --json` | Output in JSON array format |
-| `-l, --jsonl` | Output in JSONL format (one JSON per line) |
+| `-l, --jsonl` | Output in JSONL format (one JSON object per line) |
 | `-n, --line-numbers` | Add line numbers |
 | `-o, --output` | Write to file instead of stdout |
 
@@ -201,4 +219,3 @@ This project is licensed under the Apache 2.0 License. See the LICENSE file for 
 <div align="center">
   <sub>Built with ❤️ for the modern developer ecosystem</sub>
 </div>
-```

@@ -6,12 +6,12 @@ import random
 import shutil
 import subprocess
 import tempfile
-from typing import List, Dict
-from rich.console import Console
+from typing import Dict, List
+
+import vertexai
 
 # Vertex AI imports
-from google.cloud import aiplatform
-import vertexai
+from rich.console import Console
 from vertexai.language_models import TextGenerationModel
 from vertexai.preview.generative_models import GenerativeModel
 
